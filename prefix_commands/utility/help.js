@@ -1,28 +1,43 @@
 const { EmbedBuilder } = require('discord.js');
+const fs = require('node:fs');
+const path = require('node:path');
+const db = require('../../database.js');
+
+function getPrefix(guildId) {
+    const stmt = db.prepare('SELECT prefix FROM server_settings WHERE guild_id = ?');
+    const result = stmt.get(guildId);
+    return (result && result.prefix) ? result.prefix : '!';
+}
 
 module.exports = {
     name: 'help',
     description: 'Menampilkan daftar semua prefix command yang tersedia.',
     execute(message, args) {
-        // Mengambil semua prefix command dari koleksi client
-        const commands = message.client.prefixCommands;
-
+        const prefix = getPrefix(message.guild.id);
         const helpEmbed = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle('Bantuan Prefix Command')
-            .setDescription('Berikut adalah daftar command yang bisa kamu gunakan dengan prefix server ini.');
-        
-        // Membuat daftar command
-        const commandList = commands.map(cmd => {
-            return `\`${cmd.name}\` - ${cmd.description}`;
-        }).join('\n');
+            .setTitle('📜 Bantuan Prefix Command')
+            .setDescription(`Gunakan prefix \`${prefix}\` sebelum setiap nama command.`);
 
-        if (commandList) {
-            helpEmbed.addFields({ name: 'Commands', value: commandList });
-        } else {
-            helpEmbed.addFields({ name: 'Commands', value: 'Tidak ada prefix command yang tersedia saat ini.' });
+        const prefixCommandsPath = path.join(__dirname, '../../prefix_commands');
+        const prefixCommandFolders = fs.readdirSync(prefixCommandsPath);
+
+        for (const folder of prefixCommandFolders) {
+            const commandsList = [];
+            const folderPath = path.join(prefixCommandsPath, folder);
+            const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
+            for (const file of commandFiles) {
+                const command = require(path.join(folderPath, file));
+                if (command.name) {
+                    commandsList.push(`\`${prefix}${command.name}\` - ${command.description || 'Tidak ada deskripsi.'}`);
+                }
+            }
+            if (commandsList.length > 0) {
+                const categoryName = folder.charAt(0).toUpperCase() + folder.slice(1);
+                helpEmbed.addFields({ name: `Kategori: ${categoryName}`, value: commandsList.join('\n'), inline: false });
+            }
         }
-
+        
         message.channel.send({ embeds: [helpEmbed] });
     }
 };
