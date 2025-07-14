@@ -15,7 +15,7 @@ module.exports = {
     execute(message, args) {
         const prefix = getPrefix(message.guild.id);
         const helpEmbed = new EmbedBuilder()
-            .setColor('#0099ff')
+            .setColor('#790202ff')
             .setTitle('📜 Bantuan Prefix Command')
             .setDescription(`Gunakan prefix \`${prefix}\` sebelum setiap nama command.`);
 
